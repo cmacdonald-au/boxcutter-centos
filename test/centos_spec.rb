@@ -6,7 +6,13 @@ describe 'box' do
   end
 
   it 'should have a vagrant user' do
-    expect(user 'vagrant').to exist
+
+    expect(file, '/etc/vagrant.uname').to be_file
+
+    vagrant_user = command('cat /etc/vagrant.uname').stdout
+    expect(vagrant_user).to_not be_empty
+
+    expect(user vagrant_user).to exist
   end
 
   it 'should not have a .vbox_version file' do

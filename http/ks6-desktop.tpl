@@ -1,8 +1,8 @@
-# CentOS 5.x kickstart file - ks5.cfg
+# CentOS 6.x kickstart file - ks6-desktop.cfg
 #
 # For more information on kickstart syntax and commands, refer to the
 # CentOS Installation Guide:
-# http://www.centos.org/docs/5/html/Installation_Guide-en-US/ch-kickstart2.html
+# https://access.redhat.com/site/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Installation_Guide/s1-kickstart2-options.html
 #
 # For testing, you can fire up a local http server temporarily.
 # cd to the directory where this ks.cfg file resides and run the following:
@@ -23,24 +23,42 @@ timezone UTC
 # Optional settings
 install
 cdrom
-user --name=vagrant --password vagrant
+user --name=%%SSH_USERNAME%% --plaintext --password %%SSH_PASSWORD%%
+unsupported_hardware
 network --bootproto=dhcp
 firewall --disabled
 selinux --permissive
 bootloader --location=mbr
 text
-skipx
+xconfig --startxonboot --resolution=1024x76 --depth=24
 zerombr
 clearpart --all --initlabel
 autopart
 firstboot --disabled
-reboot
+reboot --eject
 
-#%packages --ignoremissing --excludedocs
-%packages --nobase --ignoremissing --excludedocs
-# vagrant needs this to copy initial files via scp
-openssh-clients
-openssh-server
+%packages --ignoremissing --excludedocs
+# yum -v grouplist - get groupids
+@base
+@debugging
+@directory-client
+@java-platform
+@network-file-system-client
+@print-client
+@basic-desktop
+@desktop-debugging
+@desktop-platform
+@fonts
+@general-desktop
+@graphical-admin-tools
+@input-methods
+@legacy-x
+@remote-desktop-clients
+@x11
+@server-platform
+@internet-applications
+@internet-browser
+@office-suite
 # Prerequisites for installing VMware Tools or VirtualBox guest additions.
 # Put in kickstart to ensure first version installed is from install disk,
 # not latest from a mirror.
@@ -51,38 +69,11 @@ make
 perl
 curl
 wget
-bzip2
-# Other stuff
-dhclient
-sudo
-yum
-nfs-utils
--fprintd-pam
--intltool
--avahi
--bluez-utils
--dogtail
--kudzu
-
-# unnecessary firmware
--aic94xx-firmware
--atmel-firmware
--b43-openfwwf
--bfa-firmware
--ipw*-firmware
--irqbalance
--ivtv-firmware
--iwl*-firmware
--libertas-usb8388-firmware
--ql*-firmware
--rt61pci-firmware
--rt73usb-firmware
--xorg-x11-drv-ati-firmware
--zd1211-firmware
 
 %post
 # configure vagrant user in sudoers
-echo "vagrant        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers
+echo "%%%SSH_USERNAME%% ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/vagrant
+chmod 0440 /etc/sudoers.d/vagrant
 sed -i "s/^\(.*requiretty\)$/#\1/" /etc/sudoers
 # keep proxy settings through sudo
 echo 'Defaults env_keep += "HTTP_PROXY HTTPS_PROXY FTP_PROXY RSYNC_PROXY NO_PROXY"' >> /etc/sudoers

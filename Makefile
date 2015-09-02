@@ -4,6 +4,7 @@ ifneq ("$(wildcard Makefile.local)", "")
 endif
 
 PACKER ?= packer
+PACKER_DEBUG ?= 
 
 # Possible values for CM: (nocm | chef | chefdk | salt | puppet)
 CM ?= nocm
@@ -14,9 +15,16 @@ ifndef CM_VERSION
 		CM_VERSION = latest
 	endif
 endif
+
+#if you override these in Makefile.local or run `make clean` - you must run `make kickstart` to update the kickstart files
 SSH_USERNAME ?= vagrant
 SSH_PASSWORD ?= vagrant
-INSTALL_VAGRANT_KEY ?= true
+ROOT_PASSWORD ?= $(SSH_PASSWORD)
+
+INSTALL_SSH_KEY ?= true
+# https://raw.githubusercontent.com/mitchellh/vagrant/master/keys/vagrant.pub
+SSH_KEY ?= ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key
+
 ISO_PATH ?= iso
 BOX_VERSION ?= $(shell cat VERSION)
 ifeq ($(CM),nocm)
@@ -24,19 +32,35 @@ ifeq ($(CM),nocm)
 else
 	BOX_SUFFIX := -$(CM)$(CM_VERSION)-$(BOX_VERSION).box
 endif
+
 # Packer does not allow empty variables, so only pass variables that are defined
-PACKER_VARS_LIST = 'cm=$(CM)' 'headless=$(HEADLESS)' 'update=$(UPDATE)' 'version=$(BOX_VERSION)' 'ssh_username=$(SSH_USERNAME)' 'ssh_password=$(SSH_PASSWORD)' 'install_vagrant_key=$(INSTALL_VAGRANT_KEY)' 'iso_path=$(ISO_PATH)'
+PACKER_VARS_LIST = 'cm=$(CM)' 'headless=$(HEADLESS)' 'update=$(UPDATE)' 'version=$(BOX_VERSION)' 'ssh_username=$(SSH_USERNAME)' 'ssh_password=$(SSH_PASSWORD)' 'install_ssh_key=$(INSTALL_SSH_KEY)' 'iso_path=$(ISO_PATH)'
 ifdef CM_VERSION
 	PACKER_VARS_LIST += 'cm_version=$(CM_VERSION)'
 endif
 PACKER_VARS := $(addprefix -var , $(PACKER_VARS_LIST))
+
+KICKSTART_ARGS = SSH_PASSWORD=$(SSH_PASSWORD) SSH_USERNAME=$(SSH_USERNAME) ROOT_PASSWORD=$(ROOT_PASSWORD)
+
+# This comes after the addprefix step because SSH pubkey lines have spaces in them, eg: `ssh-rsa AAAAB....` (but they don't have single quotes)
+ifdef SSH_KEY
+	ifeq ($(INSTALL_SSH_KEY),true)
+		PACKER_VARS += -var 'ssh_key=$(SSH_KEY)'
+	endif
+endif
+
 ifdef PACKER_DEBUG
-	PACKER_CMD := PACKER_LOG=1 $(PACKER) --debug
+	PACKER_CMD := PACKER_LOG=1 $(PACKER)
+	PACKER_DEBUG := -debug
 else
 	PACKER_CMD := $(PACKER)
 endif
+
 BUILDER_TYPES := vmware virtualbox parallels
 TEMPLATE_FILENAMES := $(wildcard *.json)
+KICKSTART_DIR := http
+KICKSTART_TEMPLATES := $(wildcard $(KICKSTART_DIR)/*.tpl)
+KICKSTART_FILENAMES := $(wildcard $(KICKSTART_DIR)/*.cfg)
 BOX_FILENAMES := $(TEMPLATE_FILENAMES:.json=$(BOX_SUFFIX))
 TEST_BOX_FILES := $(foreach builder, $(BUILDER_TYPES), $(foreach box_filename, $(BOX_FILENAMES), test-box/$(builder)/$(box_filename)))
 VMWARE_BOX_DIR := box/vmware
@@ -118,17 +142,17 @@ $(foreach i,$(SHORTCUT_TARGETS),$(eval $(call SHORTCUT,$(i))))
 $(VMWARE_BOX_DIR)/%$(BOX_SUFFIX): %.json $(SOURCES)
 	rm -rf $(VMWARE_OUTPUT)
 	mkdir -p $(VMWARE_BOX_DIR)
-	$(PACKER_CMD) build -only=$(VMWARE_BUILDER) $(PACKER_VARS) $<
+	$(PACKER_CMD) build $(PACKER_DEBUG) -only=$(VMWARE_BUILDER) $(PACKER_VARS) $<
 
 $(VIRTUALBOX_BOX_DIR)/%$(BOX_SUFFIX): %.json $(SOURCES)
 	rm -rf $(VIRTUALBOX_OUTPUT)
 	mkdir -p $(VIRTUALBOX_BOX_DIR)
-	$(PACKER_CMD) build -only=$(VIRTUALBOX_BUILDER) $(PACKER_VARS) $<
+	$(PACKER_CMD) build $(PACKER_DEBUG) -only=$(VIRTUALBOX_BUILDER) $(PACKER_VARS) $<
 
 $(PARALLELS_BOX_DIR)/%$(BOX_SUFFIX): %.json $(SOURCES)
 	rm -rf $(PARALLELS_OUTPUT)
 	mkdir -p $(PARALLELS_BOX_DIR)
-	$(PACKER_CMD) build -only=$(PARALLELS_BUILDER) $(PACKER_VARS) $<
+	$(PACKER_CMD) build $(PACKER_DEBUG) -only=$(PARALLELS_BUILDER) $(PACKER_VARS) $<
 
 list:
 	@echo "Prepend 'vmware/', 'virtualbox/', or 'parallels/' to build only one target platform:"
@@ -145,7 +169,14 @@ validate:
 		packer validate $$template_filename ; \
 	done
 
-clean: clean-builders clean-output clean-packer-cache
+kickstart: clean-kickstart
+	@echo Creating kickstart config files using $(KICKSTART_ARGS)
+	@for kstpl_filename in $(KICKSTART_TEMPLATES) ; do \
+		echo "=> Input: $$kstpl_filename" ; \
+		env $(KICKSTART_ARGS) bin/kickstart.sh $$kstpl_filename ; \
+	done
+
+clean: clean-builders clean-output clean-packer-cache clean-kickstart
 
 clean-builders:
 	@for builder in $(BUILDER_TYPES) ; do \
@@ -164,6 +195,13 @@ clean-output:
 clean-packer-cache:
 	echo Deleting packer_cache
 	rm -rf packer_cache
+
+clean-kickstart:
+	@echo Cleaning out old kickstart config files
+	@for kickstart_filename in $(KICKSTART_FILENAMES) ; do \
+		echo "=> $$kickstart_filename" ; \
+		rm -f $$kickstart_filename ; \
+	done
 
 test-vmware: $(addprefix test-,$(VMWARE_BOX_FILES))
 test-virtualbox: $(addprefix test-,$(VIRTUALBOX_BOX_FILES))

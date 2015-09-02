@@ -23,7 +23,7 @@ timezone UTC
 # Optional settings
 install
 cdrom
-user --name=vagrant --password vagrant
+user --name=%%SSH_USERNAME%% --password %%SSH_PASSWORD%%
 network --bootproto=dhcp
 firewall --disabled
 selinux --permissive
@@ -82,7 +82,7 @@ nfs-utils
 
 %post
 # configure vagrant user in sudoers
-echo "vagrant        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers
+echo "%%SSH_USERNAME%%        ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers
 sed -i "s/^\(.*requiretty\)$/#\1/" /etc/sudoers
 # keep proxy settings through sudo
 echo 'Defaults env_keep += "HTTP_PROXY HTTPS_PROXY FTP_PROXY RSYNC_PROXY NO_PROXY"' >> /etc/sudoers

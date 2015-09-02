@@ -14,7 +14,7 @@
         "{{ user `iso_path` }}/{{ user `iso_name` }}",
         "{{ user `iso_url` }}"
       ],
-      "shutdown_command": "echo 'vagrant'|sudo -S shutdown -P now",
+      "shutdown_command": "echo '{{ user `ssh_password` }}'|sudo -S shutdown -P now",
       "ssh_password": "{{ user `ssh_password` }}",
       "ssh_username": "{{ user `ssh_username` }}",
       "ssh_wait_timeout": "10000s",
@@ -43,7 +43,7 @@
         "{{ user `iso_path` }}/{{ user `iso_name` }}",
         "{{ user `iso_url` }}"
       ],
-      "shutdown_command": "echo 'vagrant'|sudo -S shutdown -P now",
+      "shutdown_command": "echo '{{ user `ssh_password` }}'|sudo -S shutdown -P now",
       "ssh_password": "{{ user `ssh_password` }}",
       "ssh_username": "{{ user `ssh_username` }}",
       "ssh_wait_timeout": "10000s",
@@ -93,7 +93,7 @@
           "1"
         ]
       ],
-      "shutdown_command": "echo 'vagrant'|sudo -S shutdown -P now",
+      "shutdown_command": "echo '{{ user `ssh_password` }}'|sudo -S shutdown -P now",
       "ssh_password": "{{ user `ssh_password` }}",
       "ssh_username": "{{ user `ssh_username` }}",
       "ssh_wait_timeout": "10000s",
@@ -115,16 +115,17 @@
         "CM_VERSION={{user `cm_version`}}",
         "CLEANUP_PAUSE={{user `cleanup_pause`}}",
         "UPDATE={{user `update`}}",
-        "INSTALL_VAGRANT_KEY={{user `install_vagrant_key`}}",
-        "SSH_USERNAME={{user `ssh_username`}}",
+        "INSTALL_SSH_KEY={{user `install_ssh_key`}}",
+        "SSH_KEY={{user `ssh_key`}}",
         "SSH_PASSWORD={{user `ssh_password`}}",
+        "SSH_USERNAME={{user `ssh_username`}}",
         "http_proxy={{user `http_proxy`}}",
         "https_proxy={{user `https_proxy`}}",
         "ftp_proxy={{user `ftp_proxy`}}",
         "rsync_proxy={{user `rsync_proxy`}}",
         "no_proxy={{user `no_proxy`}}"
       ],
-      "execute_command": "echo 'vagrant' | {{.Vars}} sudo -E -S bash '{{.Path}}'",
+      "execute_command": "echo '{{ user `ssh_password` }}' | {{.Vars}} sudo -E -S bash '{{.Path}}'",
       "scripts": [
         "script/fix-slow-dns.sh",
         "script/sshd.sh",
@@ -145,7 +146,7 @@
     "headless": "",
     "http_proxy": "{{env `http_proxy`}}",
     "https_proxy": "{{env `https_proxy`}}",
-    "install_vagrant_key": "true",
+    "install_ssh_key": "true",
     "iso_checksum": "7bb8c1c23a4fdef93e6f0a6347d570e5764d0b38",
     "iso_name": "CentOS-6.7-x86_64-bin-DVD1.iso",
     "iso_path": "iso",
@@ -154,6 +155,7 @@
     "rsync_proxy": "{{env `rsync_proxy`}}",
     "ssh_password": "vagrant",
     "ssh_username": "vagrant",
+    "ssh_key": "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA6NF8iallvQVp22WDkTkyrtvp9eWW6A8YVr+kz4TjGYe7gHzIw+niNltGEFHzD8+v1I2YJ6oXevct1YeS0o9HZyN1Q9qgCgzUFtdOKLv6IedplqoPkcmF0aYet2PkEDo3MlTBckFXPITAMzF8dJSIFo9D8HfdOV0IAdx4O7PtixWKn5y2hMNG0zQPyUecp4pzC6kivAIhyfHilFR61RGL+GPXQ2MWZWFYbAGjyiYJnAmCP3NOTd0jMZEnDkbUvxhMmBYSdETk1rRgm+R4LOzFUGaHqHDLKLX+FIPKcF96hrucXzcWyLbIbEgE98OHlnVYCzRdK8jlqm8tehUc9c9WhQ== vagrant insecure public key",
     "update": "false",
     "version": "0.1.0"
   }
