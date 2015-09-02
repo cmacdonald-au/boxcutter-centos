@@ -22,4 +22,6 @@ fi
 
 OUTPUTFILE=$(echo $1 | sed -Ee 's,\.tpl$,.cfg,')
 echo "==> Writing: $OUTPUTFILE"
-sed -e "s/%%SSH_USERNAME%%/${SSH_USERNAME}/g" -e "s/%%SSH_PASSWORD%%/${SSH_PASSWORD}/g" $1 > $OUTPUTFILE;
+sed -e "s/%%SSH_USERNAME%%/${SSH_USERNAME}/g"\
+  -e "s/%%SSH_PASSWORD%%/${SSH_PASSWORD}/g"\
+  -e "s/%%ROOT_PASSWORD%%/${ROOT_PASSWORD}/g" $1 > $OUTPUTFILE;
