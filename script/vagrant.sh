@@ -23,18 +23,18 @@ if [ "$INSTALL_SSH_KEY" = "true" ] || [ "$INSTALL_SSH_KEY" = "1" ]; then
 
   fi
 
-  # Record the vagrant username if it's not already there to allow for testing
-  if ! -f /etc/vagrant.uname; then
-    echo '==> Recording the vagrant username'
-    echo $SSH_USER > /etc/vagrant.uname
-  fi
-
   echo '==> Installing SSH key'
   mkdir -pm 700 ${SSH_USER_HOME}/.ssh
   echo "${SSH_KEY}" > $SSH_USER_HOME/.ssh/authorized_keys
   chmod 0600 ${SSH_USER_HOME}/.ssh/authorized_keys
   chown -R ${SSH_USER}:${SSH_USER} ${SSH_USER_HOME}/.ssh
 
+fi
+
+# Record the vagrant username if it's not already there to accomodate tests
+if [ ! -f /etc/vagrant.uname ]; then
+  echo '==> Recording the vagrant username'
+  echo $SSH_USER > /etc/vagrant.uname
 fi
 
 echo '==> Recording box config date'

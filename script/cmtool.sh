@@ -13,6 +13,9 @@
 #   'x.y'             -- build a box with version x.y of Salt
 #   'latest'          -- build a box with the latest version
 #
+# Values for CM_VERSION can be (when CM is puppet):
+#   'pc1'             -- install Puppet Collections 1
+#
 # Set CM_VERSION to 'latest' if unset because it can be problematic
 # to set variables in pairs with Packer (and Packer does not support
 # multi-value variables).
@@ -67,15 +70,24 @@ install_puppet()
     echo "==> Installing Puppet"
     REDHAT_MAJOR_VERSION=$(egrep -Eo 'release ([0-9][0-9.]*)' /etc/redhat-release | cut -f2 -d' ' | cut -f1 -d.)
 
-    echo "==> Installing Puppet Labs repositories"
-    rpm -ipv "http://yum.puppetlabs.com/puppetlabs-release-el-${REDHAT_MAJOR_VERSION}.noarch.rpm"
+    if [[ ${CM_VERSION:-} == 'pc1' ]]; then
 
-    if [[ ${CM_VERSION:-} == 'latest' ]]; then
-        echo "==> Installing latest Puppet version"
-        yum -y install puppet
+        echo "==> Installing Puppet Collection"
+        yum -y localinstall "http://yum.puppetlabs.com/puppetlabs-release-pc1-el-${REDHAT_MAJOR_VERSION}.noarch.rpm"
+
     else
-        echo "==> Installing Puppet version ${CM_VERSION}"
-        yum -y install "puppet-${CM_VERSION}"
+
+        echo "==> Installing Puppet Labs repositories"
+        rpm -ipv "http://yum.puppetlabs.com/puppetlabs-release-el-${REDHAT_MAJOR_VERSION}.noarch.rpm"
+
+        if [[ ${CM_VERSION:-} == 'latest' ]]; then
+            echo "==> Installing latest Puppet version"
+            yum -y install puppet
+        else
+            echo "==> Installing Puppet version ${CM_VERSION}"
+            yum -y install "puppet-${CM_VERSION}"
+        fi
+
     fi
 }
 
